@@ -1,0 +1,46 @@
+#!/bin/sh
+
+#### Quality control####
+mkdir FF/
+cd FF/
+wget https://public-docs.crg.es/biocore/projects/training/RNAseq_2019/resources.tar
+tar -vxf resources.tar # untar folder
+head -n 10 resources/A549_0_3chr10_1.fastq.gz #take a look to CIGAR lines
+module load fastqc
+cd ..
+mkdir QC/
+cd QC/
+resources/A549_25_3chr10_*.fastq.gz -o ./QC/
+# open Filezilla
+# download html report to your local machine
+#open downloaded .html file in your browser
+
+####Alignment####
+# download fa and gtf files 
+cd ..
+wget https://public-docs.crg.es/biocore/projects/training/RNAseq_2019/annotations.tar
+tar -xf annotations.tar
+#zcat annotations/Homo_sapiens.GRCh38.dna.chromosome.10.fa.gz| head -n 5
+#zcat annotations/gencode.v29.annotation_chr10.gtf.gz | head -n 10
+cd annotations
+gunzip -k gencode.v29.annotation_chr10.gtf.gz
+cd ..
+mkdir indexes
+mkdir indexes/chr10
+module load STAR/2.5.3a
+#build index
+bsub -R "rusage[mem=20G]" -q long STAR --runThreadN 24 --runMode genomeGenerate --genomeDir /home/o515a/indexes/chr10 --genomeFastaFiles /home/o515a/annotations/Homo_sapiens.GRCh38.dna.chromosome.10.fa --sjdbGTFfile /home/o515a/annotations/gencode.v29.annotation_chr10.gtf sjdbOverhang 50 --outFileNamePrefix chr10
+#maping reads
+mkdir alignments
+bsub -R "rusage[mem=20G]" -q long STAR --runThreadN 24 --genomeDir /home/o515a/indexes/chr10/  --readFilesIn /home/o515a/FF/resources/A549_0_1chr10_1.fastq.gz /home/o515a/FF/resources/A549_0_1chr10_2.fastq.gz --readFilesCommand zcat --outSAMtype BAM SortedByCoordinate --quantMode GeneCounts --outFileNamePrefix /home/o515a/alignments/A549_0_1
+cat A549_0_1ReadsPerGene.out.tab | head -100
+
+
+
+
+
+
+
+
+
+
